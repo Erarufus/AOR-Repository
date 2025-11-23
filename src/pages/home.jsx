@@ -1,10 +1,9 @@
 
-import React from "react";
-
 const HomePage = () => {
     return (
         <div>
             <h1>home Test</h1>
+
         </div>
     );
 };
