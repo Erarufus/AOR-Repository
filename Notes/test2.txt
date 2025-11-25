@@ -1,0 +1,25 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "bold"
+            },
+            {
+              "type": "italic"
+            },
+            {
+              "type": "strike"
+            }
+          ],
+          "text": "test 223 s"
+        }
+      ]
+    }
+  ]
+}

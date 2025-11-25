@@ -1,8 +1,99 @@
-body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
-  margin: auto;
-  max-width: 38rem;
-  padding: 2rem;
+/* Main layout for the notes page */
+.notes-layout {
+  display: flex;
+  /* Adjust 50px based on your navigation bar's height if it exists */
+  height: calc(100vh - 50px); 
+}
+
+/* Sidebar styles */
+.notes-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-right: 1px solid #dee2e6;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.notes-sidebar h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  color: #495057;
+  border-bottom: 1px solid #ced4da;
+  padding-bottom: 0.5rem;
+}
+
+.notes-sidebar button {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.notes-sidebar button:hover {
+  background-color: #0056b3;
+}
+
+.notes-sidebar .file-info {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.notes-sidebar .file-info p {
+  margin-top: 0.25rem;
+  word-wrap: break-word;
+}
+
+/* Main content area styles */
+.notes-main-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent editor from overflowing */
+}
+
+.note-editor-panel {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background-color: #fff;
+  overflow: hidden; /* Ensure children are contained */
+}
+
+/* Tiptap editor specific styles */
+.note-editor-panel .controls {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #ced4da;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0; /* Prevent menu from shrinking */
+  overflow-x: auto; /* Allow menu to scroll if needed */
+}
+
+.note-editor-panel .ProseMirror {
+  flex-grow: 1;
+  padding: 0.5rem;
+  overflow-y: auto; /* Make the editor scrollable */
+  outline: none;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+.notes-sidebar .file-info .status-saved {
+  color: #28a745; /* green */
+  font-weight: bold;
+  margin-top: 0.5rem;
+}
+
+.notes-sidebar .file-info .status-unsaved {
+  color: #fd7e14; /* orange */
+  font-weight: bold;
+  margin-top: 0.5rem;
 }

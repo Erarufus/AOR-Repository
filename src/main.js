@@ -1,5 +1,6 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import started from 'electron-squirrel-startup';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -28,6 +29,28 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 };
 
+ipcMain.handle('dialog:openFile', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Text Documents', extensions: ['json', 'txt', 'md'] }]
+  });
+  if (!canceled && filePaths.length > 0) {
+    const filePath = filePaths[0];
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return { filePath, content };
+    } catch (err) {
+      console.error('Failed to read file:', err);
+      return null;
+    }
+  }
+  return null;
+});
+
+ipcMain.on('file:save', (event, filePath, content) => {
+  fs.writeFileSync(filePath, content);
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -51,6 +74,3 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.

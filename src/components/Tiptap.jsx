@@ -3,7 +3,7 @@ import { useEditor, EditorContent, EditorContext, useEditorState } from '@tiptap
 import { TextStyleKit } from '@tiptap/extension-text-style'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { useCurrentEditor } from '@tiptap/react'
 
 
@@ -16,6 +16,7 @@ const EditorJSONPreview = () => {
 
 
 function MenuBar({editor}) {
+
   const editorState = useEditorState({
     editor,
     selector: ctx => {
@@ -156,19 +157,39 @@ function MenuBar({editor}) {
   )
 };
 
-const Tiptap = () => {
+const Tiptap = ({content, onUpdate}) => {
   const editor = useEditor({
     extensions: [StarterKit, TextStyleKit], 
-    content: '<p>Hello World!</p>', 
-  })
- const providerValue = useMemo(() => ({ editor }), [editor])
+    editable: true,
+    content: content || '<p>Open a file to start editing, or just begin typing...</p>',
+    onUpdate: ({ editor }) => {
+      if (onUpdate) {
+        onUpdate(editor.getJSON());
+    }
+  },
+  editorProps: {
+    attributes: {
+      spellcheck: 'false',
+    },
+  },
+  });
+
+  useEffect(() => {
+    if (!editor || !content) {
+      return;
+    }
+
+    const isSame = JSON.stringify(editor.getJSON()) === JSON.stringify(content);
+
+    if (!isSame) {
+      editor.commands.setContent(content, false);
+    }
+  }, [content, editor]);
   return (
     <>
       <MenuBar editor={editor} />
-      <EditorContext.Provider value={providerValue}>
-        <EditorContent editor={editor} />
-        <BubbleMenu editor={editor}>This is the bubble menu</BubbleMenu>
-      </EditorContext.Provider>
+      <EditorContent editor={editor} />
+      {editor && <BubbleMenu editor={editor}>This is the bubble menu</BubbleMenu>}
     </>
   )
 }
