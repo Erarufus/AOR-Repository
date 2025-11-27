@@ -70,13 +70,11 @@ const NotesPage = () => {
             setNoteTitle(fileName);
             setFilePath(result.filePath);
             try {
-                // We save notes as JSON, so we try to parse it.
                 const parsedContent = JSON.parse(result.content);
                 setCurrentNoteId(parsedContent.id);
                 const { id, ...tiptapContent } = parsedContent;
                 setContent(tiptapContent);
             } catch (error) {
-                // If it's not JSON we treat it as plain text.
                 console.warn("File content is not valid JSON. Treating as plain text.", error);
                 setContent({
                     type: 'doc',
@@ -130,7 +128,7 @@ const NotesPage = () => {
         const currentFileName = pathParts[pathParts.length - 1].replace(/\.json$/, '');
 
         if (noteTitle === currentFileName) {
-            return; // No change needed
+            return; 
         }
 
         const handler = setTimeout(async () => {
@@ -167,7 +165,7 @@ const NotesPage = () => {
 
     const handleSetNoteLink = (targetNoteId) => {
         if (editorInstance) {
-            // This command applies the mark to the user's selection
+           
             editorInstance
                 .chain()
                 .focus()
