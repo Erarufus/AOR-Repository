@@ -2,6 +2,17 @@
 import Tiptap from '../components/Tiptap.jsx';
 import React, { useState, useCallback, useEffect } from 'react';
 import '/src/index.css';
+import IconButton from '@mui/material/IconButton';
+import DeleteIcon from '@mui/icons-material/Delete';
+import {
+    Dialog,
+    DialogTitle,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    TextField,
+} from '@mui/material';
 
 const NotesPage = () => {
     const [filePath, setFilePath] = useState(null);
@@ -9,6 +20,9 @@ const NotesPage = () => {
     const [isSaved, setIsSaved] = useState(true);
     const [noteFiles, setNoteFiles] = useState([]);
     const [noteTitle, setNoteTitle] = useState('');
+    const [editorInstance, setEditorInstance] = useState(null);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const loadNoteFiles = async () => {
         const files = await window.api.getNoteFiles();
@@ -100,7 +114,36 @@ const NotesPage = () => {
         // The useEffect hook will handle the saving
         setIsSaved(false);
         setContent(newContent);
-    }, []);    
+    }, []);   
+    
+    const handleOpenLinkModal = () => {
+        if (editorInstance && !editorInstance.state.selection.empty) {
+            setSearchTerm('');
+            setIsLinkModalOpen(true);
+        }
+    };
+
+    const handleSetNoteLink = (targetNoteId) => {
+        if (editorInstance) {
+            // This command applies the mark to the user's selection
+            editorInstance
+                .chain()
+                .focus()
+                .extendMarkRange('noteLink')
+                .setNoteLink({ noteId: targetNoteId })
+                .run();
+        }
+        setIsLinkModalOpen(false);
+    };
+
+    const handleNoteLinkNavigation = (noteId) => {
+        const targetNote = noteFiles.find(note => note.id === noteId);
+        if (targetNote) {
+            handleOpenFile(targetNote.title);
+        } else {
+            alert("The linked note could not be found. It may have been deleted.");
+        }
+    };
 
     const handleNewNote = async () => {
         const title = "Untitled Note";
@@ -118,20 +161,30 @@ const NotesPage = () => {
     const handleDeleteNote = async (fileName) => {
         const isConfirmed = window.confirm(`Are you sure you want to delete "${fileName}"?`);
         if (isConfirmed) {
-            const result = await window.api.deleteNote(fileName);
-            if (result.success) {
-                await loadNoteFiles();
-                // If the deleted note was the one being edited, clear the editor
-                if (noteTitle === fileName) {
-                    setFilePath(null);
-                    setContent(null);
-                    setNoteTitle('');
+            const wasActiveNote = noteTitle === fileName;
+            const deleteResult = await window.api.deleteNote(fileName);
+
+            if (deleteResult.success) {
+                const updatedFiles = await window.api.getNoteFiles();
+                setNoteFiles(updatedFiles);
+
+                if (wasActiveNote) {
+                    if (updatedFiles.length > 0) {
+                        // Open the first note in the new list
+                        handleOpenFile(updatedFiles[0].title);
+                    } else {
+                        // No files left, so clear the editor
+                        setFilePath(null);
+                        setContent(null);
+                        setNoteTitle('');
+                    }
                 }
             } else {
-                alert(`Error deleting note: ${result.error}`);
+                alert(`Error deleting note: ${deleteResult.error}`);
             }
         }
     };
+    
         
 
         
@@ -148,12 +201,14 @@ const NotesPage = () => {
                 </div>
             </div>
                 <div className="note-files-list">
-                    {noteFiles.map((file) => (
-                        <div key={file} className="note-file-item">
-                            <div className="note-file-item-opener" onClick={() => handleOpenFile(file)}>
-                                {file}
+                {noteFiles.map((note) => (
+                        <div key={note.id} className={`note-file-item ${note.title === noteTitle ? 'active' : ''}`}>
+                            <div className="note-file-item-opener" onClick={() => handleOpenFile(note.title)} title={note.title}>
+                                {note.title}
                             </div>
-                            <button className="delete-note-btn" onClick={() => handleDeleteNote(file)} title={`Delete ${file}`}>&times;</button>
+                            <div>
+                            <IconButton onClick={() => handleDeleteNote(note.title)} title={`Delete ${note.title}`}><DeleteIcon /></IconButton>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -180,9 +235,37 @@ const NotesPage = () => {
                             placeholder="Note Title"
                         />
                     )}
-                    <Tiptap content={content} onUpdate={handleContentUpdate} />
+                    <Tiptap
+                        content={content}
+                        onUpdate={handleContentUpdate}
+                        onEditorCreated={setEditorInstance}
+                        onNoteLinkClick={handleNoteLinkNavigation}
+                        onLinkButtonClick={handleOpenLinkModal}
+                    />
                 </div>
             </main>
+            <Dialog onClose={() => setIsLinkModalOpen(false)} open={isLinkModalOpen} fullWidth maxWidth="xs">
+                <DialogTitle>Link to another note</DialogTitle>
+                <TextField
+                    label="Search notes"
+                    variant="outlined"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ margin: '0 16px 16px 16px' }}
+                    autoFocus
+                />
+                <List sx={{ pt: 0, maxHeight: '40vh', overflow: 'auto' }}>
+                    {noteFiles
+                        .filter(note => note.title.toLowerCase().includes(searchTerm.toLowerCase()) && note.title !== noteTitle)
+                        .map((note) => (
+                            <ListItem disableGutters key={note.id}>
+                                <ListItemButton onClick={() => handleSetNoteLink(note.id)}>
+                                    <ListItemText primary={note.title} />
+                                </ListItemButton>
+                            </ListItem>
+                        ))}
+                </List>
+            </Dialog>
 
         </div>
     );

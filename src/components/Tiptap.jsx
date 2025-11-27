@@ -4,10 +4,11 @@ import { TextStyleKit } from '@tiptap/extension-text-style'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import React, { useMemo, useEffect } from 'react'
+import { NoteLink } from './NoteLink.js';
 
 
 
-function MenuBar({editor}) {
+function MenuBar({editor, onLinkButtonClick}) {
   if (!editor) {
     return null;
   }
@@ -37,6 +38,8 @@ function MenuBar({editor}) {
         isBlockquote: ctx.editor.isActive('blockquote') ?? false,
         canUndo: ctx.editor.can().chain().undo().run() ?? false,
         canRedo: ctx.editor.can().chain().redo().run() ?? false,
+        canSetNoteLink: !ctx.editor.state.selection.empty,
+        isNoteLink: ctx.editor.isActive('noteLink'),
       }
     }
   })
@@ -70,6 +73,16 @@ function MenuBar({editor}) {
         >
           Code
         </button>
+        <button
+          onClick={onLinkButtonClick}
+          disabled={!editorState.canSetNoteLink}
+          className={editorState.isNoteLink ? 'is-active' : ''}
+        >
+          Link to Note
+        </button>
+        {editorState.isNoteLink && (
+          <button onClick={() => editor.chain().focus().unsetNoteLink().run()}>Unlink</button>
+        )}
         <button onClick={() => editor.chain().focus().unsetAllMarks().run()}>Clear marks</button>
         <button onClick={() => editor.chain().focus().clearNodes().run()}>Clear nodes</button>
         <button
@@ -151,9 +164,9 @@ function MenuBar({editor}) {
   )
 };
 
-const Tiptap = ({content, onUpdate}) => {
+const Tiptap = ({content, onUpdate, onNoteLinkClick, onEditorCreated, onLinkButtonClick }) => {
   const editor = useEditor({
-    extensions: [StarterKit, TextStyleKit], 
+    extensions: [StarterKit, TextStyleKit, NoteLink], 
     editable: true,
     content: content || '<p>Open a file to start editing, or just begin typing...</p>',
     onUpdate: ({ editor }) => {
@@ -165,12 +178,27 @@ const Tiptap = ({content, onUpdate}) => {
     attributes: {
       spellcheck: 'false',
     },
+    handleClickOn: (view, pos, node, nodePos, event, direct) => {
+      // Handle clicks on our custom note links
+      const noteLink = event.target?.closest('[data-note-link]');
+      if (noteLink) {
+        const noteId = noteLink.getAttribute('data-note-link');
+        if (noteId && onNoteLinkClick) {
+          onNoteLinkClick(noteId);
+          return true; // Mark as handled
+        }
+      }
+      return false;
+    },
+    
   },
   });
 
   useEffect(() => {
-    if (!editor || !content) {
-      return;
+    if (editor && onEditorCreated) {
+      onEditorCreated(editor);
+    }
+    if (!editor || !content) { return;
     }
 
     const isSame = JSON.stringify(editor.getJSON()) === JSON.stringify(content);
@@ -181,7 +209,7 @@ const Tiptap = ({content, onUpdate}) => {
   }, [content, editor]);
   return (
     <>
-      <MenuBar editor={editor} />
+      <MenuBar editor={editor} onLinkButtonClick={onLinkButtonClick} />
       <EditorContent editor={editor} />
       {editor && <BubbleMenu editor={editor}>This is the bubble menu</BubbleMenu>}
     </>

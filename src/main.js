@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import started from 'electron-squirrel-startup';
+import { v4 as uuidv4 } from 'uuid';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -36,8 +37,28 @@ if (!fs.existsSync(notesPath)) {
 
 ipcMain.handle('notes:getFiles', async () => {
   try{
-    const files = fs.readdirSync(notesPath);
-    return files.filter(file => file.endsWith('.json')).map(file => file.replace(/\.json$/, ''));
+    const fileNames = fs.readdirSync(notesPath).filter(file => file.endsWith('.json'));
+    const notesData = fileNames.map(fileName => {
+    const filePath = path.join(notesPath, fileName);
+    const title = fileName.replace(/\.json$/, '');
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        let data = JSON.parse(content);
+
+        // On-the-fly migration for old notes without IDs
+        if (!data.id) {
+          data.id = uuidv4();
+          fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        }
+        return { id: data.id, title };
+      } catch (e) {
+        // If file is malformed or empty, we can't get an ID. Skip it.
+        console.error(`Could not read or parse ${fileName}:`, e);
+        return null;
+      }
+    });
+    // Filter out any nulls from failed reads
+    return notesData.filter(note => note !== null);
   }catch(err){
     console.error('Failed to read notes directory', err);
     return[];
@@ -121,12 +142,13 @@ ipcMain.handle('notes:createFile', async (event, title) => {
       newFilePath = path.join(notesPath, `${newFileName}.json`);
       counter++;
     }
-     try {
-    // Create an empty note file with a valid Tiptap/ProseMirror structure
-    const initialContent = { type: 'doc', content: [{ type: 'paragraph' }] };
-    fs.writeFileSync(newFilePath, JSON.stringify(initialContent, null, 2));
-    // Return the name (without extension) and the full path
-    return { success: true, fileName: newFileName, filePath: newFilePath };
+    try {
+      const noteId = uuidv4();
+      // Create an empty note file with a valid Tiptap/ProseMirror structure
+      const initialContent = { id: noteId, type: 'doc', content: [{ type: 'paragraph' }] };
+      fs.writeFileSync(newFilePath, JSON.stringify(initialContent, null, 2));
+      // Return the name (without extension) and the full path
+      return { success: true, fileName: newFileName, filePath: newFilePath };
   } catch (err) {
     console.error('Failed to create new note file:', err);
     return { success: false, error: err.message };
